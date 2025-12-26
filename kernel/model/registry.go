@@ -34,3 +34,22 @@ func GetComponentType(typeName string) (ComponentType, error) {
 	}
 	return factory(), nil
 }
+
+// ListComponentTypes returns all registered component type names.
+func ListComponentTypes() []string {
+	registryMu.RLock()
+	defer registryMu.RUnlock()
+	names := make([]string, 0, len(registry))
+	for name := range registry {
+		names = append(names, name)
+	}
+	return names
+}
+
+// HasComponentType checks if a component type is registered.
+func HasComponentType(typeName string) bool {
+	registryMu.RLock()
+	defer registryMu.RUnlock()
+	_, ok := registry[typeName]
+	return ok
+}

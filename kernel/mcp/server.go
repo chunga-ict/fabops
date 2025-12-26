@@ -99,6 +99,29 @@ func (fs *FablabMCPServer) registerTools() {
 		),
 	)
 	fs.server.AddTool(createTool, fs.createNetworkHandler)
+
+	// delete_instance tool
+	deleteTool := mcp.NewTool("delete_instance",
+		mcp.WithDescription("Delete an instance and all its resources"),
+		mcp.WithString("instance_id",
+			mcp.Description("ID of the instance to delete"),
+			mcp.Required(),
+		),
+		mcp.WithBoolean("force",
+			mcp.Description("Force delete without confirmation"),
+		),
+	)
+	fs.server.AddTool(deleteTool, fs.deleteInstanceHandler)
+
+	// get_diff tool
+	diffTool := mcp.NewTool("get_diff",
+		mcp.WithDescription("Get the diff between desired YAML config and current state"),
+		mcp.WithString("config_path",
+			mcp.Description("Path to YAML configuration file"),
+			mcp.Required(),
+		),
+	)
+	fs.server.AddTool(diffTool, fs.getDiffHandler)
 }
 
 func (fs *FablabMCPServer) registerResources() {
@@ -231,6 +254,112 @@ func (fs *FablabMCPServer) createNetworkHandler(ctx context.Context, request mcp
 	}
 
 	return mcp.NewToolResultText(fmt.Sprintf("Network '%s' (type: %s) created (simulation).", name, modelType)), nil
+}
+
+func (fs *FablabMCPServer) deleteInstanceHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	instanceId, err := request.RequireString("instance_id")
+	if err != nil {
+		return mcp.NewToolResultError("instance_id is required"), nil
+	}
+
+	// Check if instance exists
+	_, err = fs.store.GetStatus(instanceId)
+	if err != nil {
+		return mcp.NewToolResultError(fmt.Sprintf("instance not found: %v", err)), nil
+	}
+
+	// Get all resources for the instance
+	resources, err := fs.store.GetResources(instanceId)
+	if err != nil {
+		return mcp.NewToolResultError(fmt.Sprintf("failed to get resources: %v", err)), nil
+	}
+
+	// Delete all resources
+	deletedCount := 0
+	var deleteErrors []string
+	for resourceId := range resources {
+		if err := fs.store.DeleteResource(instanceId, resourceId); err != nil {
+			deleteErrors = append(deleteErrors, fmt.Sprintf("%s: %v", resourceId, err))
+		} else {
+			deletedCount++
+		}
+	}
+
+	response := map[string]interface{}{
+		"instance_id":     instanceId,
+		"deleted_count":   deletedCount,
+		"total_resources": len(resources),
+		"status":          "deleted",
+	}
+
+	if len(deleteErrors) > 0 {
+		response["errors"] = deleteErrors
+		response["status"] = "partial_delete"
+	}
+
+	result, _ := json.MarshalIndent(response, "", "  ")
+	return mcp.NewToolResultText(string(result)), nil
+}
+
+func (fs *FablabMCPServer) getDiffHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	configPath, err := request.RequireString("config_path")
+	if err != nil {
+		return mcp.NewToolResultError("config_path is required"), nil
+	}
+
+	// Load model from YAML
+	m, err := loader.LoadModel(configPath)
+	if err != nil {
+		return mcp.NewToolResultError(fmt.Sprintf("failed to load config: %v", err)), nil
+	}
+
+	// Create context and get diff
+	modelCtx := model.NewContext(m, nil, nil)
+	diff, err := fs.reconciler.GetDiff(modelCtx)
+	if err != nil {
+		return mcp.NewToolResultError(fmt.Sprintf("failed to compute diff: %v", err)), nil
+	}
+
+	// Build change summaries
+	creates := make([]map[string]interface{}, 0, len(diff.ToCreate))
+	for _, c := range diff.ToCreate {
+		creates = append(creates, map[string]interface{}{
+			"id":   c.Id,
+			"type": c.Type,
+		})
+	}
+
+	updates := make([]map[string]interface{}, 0, len(diff.ToUpdate))
+	for _, u := range diff.ToUpdate {
+		updates = append(updates, map[string]interface{}{
+			"id":      u.Id,
+			"type":    u.Type,
+			"changes": u.Changes,
+		})
+	}
+
+	deletes := make([]map[string]interface{}, 0, len(diff.ToDelete))
+	for _, d := range diff.ToDelete {
+		deletes = append(deletes, map[string]interface{}{
+			"id":   d.Id,
+			"type": d.Type,
+		})
+	}
+
+	response := map[string]interface{}{
+		"model_id":     m.Id,
+		"has_changes":  !diff.IsEmpty(),
+		"total":        diff.Total(),
+		"to_create":    creates,
+		"to_update":    updates,
+		"to_delete":    deletes,
+		"create_count": len(diff.ToCreate),
+		"update_count": len(diff.ToUpdate),
+		"delete_count": len(diff.ToDelete),
+	}
+
+	result, _ := json.MarshalIndent(response, "", "  ")
+	return mcp.NewToolResultText(string(result)), nil
 }
 
 // Resource Handlers

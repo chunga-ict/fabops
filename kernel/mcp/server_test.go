@@ -164,12 +164,12 @@ func TestGetResourcesHandler(t *testing.T) {
 	memStore.SaveResource("test-instance", store.ResourceState{
 		Id:     "host-1",
 		Type:   "host",
-		Status: "running",
+		Status: store.StatusRunning,
 	})
 	memStore.SaveResource("test-instance", store.ResourceState{
 		Id:     "host-2",
 		Type:   "host",
-		Status: "stopped",
+		Status: store.StatusDeleted,
 	})
 
 	server := NewFablabMCPServer(memStore)
@@ -222,5 +222,139 @@ func TestStatusHandler(t *testing.T) {
 
 	if int(response["count"].(float64)) != 1 {
 		t.Errorf("expected count 1, got %v", response["count"])
+	}
+}
+
+func TestDeleteInstanceHandler(t *testing.T) {
+	memStore := store.NewMemoryStore()
+	memStore.SaveStatus("test-instance", &model.Label{InstanceId: "test-instance"})
+	memStore.SaveResource("test-instance", store.ResourceState{
+		Id:     "host-1",
+		Type:   "host",
+		Status: store.StatusRunning,
+	})
+	memStore.SaveResource("test-instance", store.ResourceState{
+		Id:     "host-2",
+		Type:   "host",
+		Status: store.StatusRunning,
+	})
+
+	server := NewFablabMCPServer(memStore)
+
+	request := mcp.CallToolRequest{
+		Params: mcp.CallToolParams{
+			Arguments: map[string]any{
+				"instance_id": "test-instance",
+			},
+		},
+	}
+
+	result, err := server.deleteInstanceHandler(context.Background(), request)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if result.IsError {
+		t.Error("unexpected error result")
+	}
+
+	var response map[string]interface{}
+	json.Unmarshal([]byte(result.Content[0].(mcp.TextContent).Text), &response)
+
+	if int(response["deleted_count"].(float64)) != 2 {
+		t.Errorf("expected deleted_count 2, got %v", response["deleted_count"])
+	}
+
+	// Verify resources are deleted
+	resources, _ := memStore.GetResources("test-instance")
+	if len(resources) != 0 {
+		t.Errorf("expected 0 resources after delete, got %d", len(resources))
+	}
+}
+
+func TestDeleteInstanceHandler_NotFound(t *testing.T) {
+	memStore := store.NewMemoryStore()
+	server := NewFablabMCPServer(memStore)
+
+	request := mcp.CallToolRequest{
+		Params: mcp.CallToolParams{
+			Arguments: map[string]any{
+				"instance_id": "nonexistent",
+			},
+		},
+	}
+
+	result, err := server.deleteInstanceHandler(context.Background(), request)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if !result.IsError {
+		t.Error("expected error result for nonexistent instance")
+	}
+}
+
+func TestGetDiffHandler(t *testing.T) {
+	memStore := store.NewMemoryStore()
+	server := NewFablabMCPServer(memStore)
+
+	// Create test YAML file
+	tmpDir, err := os.MkdirTemp("", "mcp-diff-test-*")
+	if err != nil {
+		t.Fatalf("failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	configPath := filepath.Join(tmpDir, "test.yaml")
+	configContent := `
+model:
+  id: diff-test
+
+regions:
+  us-east-1:
+    hosts:
+      host1:
+        components:
+          - type: ziti-controller
+      host2:
+        components:
+          - type: ziti-router
+`
+	if err := os.WriteFile(configPath, []byte(configContent), 0644); err != nil {
+		t.Fatalf("failed to write config: %v", err)
+	}
+
+	request := mcp.CallToolRequest{
+		Params: mcp.CallToolParams{
+			Arguments: map[string]any{
+				"config_path": configPath,
+			},
+		},
+	}
+
+	result, err := server.getDiffHandler(context.Background(), request)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if result.IsError {
+		t.Errorf("unexpected error: %v", result.Content)
+	}
+
+	var response map[string]interface{}
+	json.Unmarshal([]byte(result.Content[0].(mcp.TextContent).Text), &response)
+
+	if response["model_id"] != "diff-test" {
+		t.Errorf("expected model_id 'diff-test', got %v", response["model_id"])
+	}
+
+	if response["has_changes"] != true {
+		t.Error("expected has_changes to be true for new config")
+	}
+
+	// Should have creates for hosts
+	createCount := int(response["create_count"].(float64))
+	if createCount < 2 {
+		t.Errorf("expected at least 2 creates, got %d", createCount)
 	}
 }

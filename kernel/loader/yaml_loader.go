@@ -3,10 +3,43 @@ package loader
 import (
 	"fmt"
 	"os"
+	"regexp"
+	"strings"
 
 	"github.com/openziti/fablab/kernel/model"
 	"gopkg.in/yaml.v2"
 )
+
+// ValidationError represents a validation issue.
+type ValidationError struct {
+	Path    string
+	Message string
+}
+
+func (e ValidationError) Error() string {
+	return fmt.Sprintf("%s: %s", e.Path, e.Message)
+}
+
+// ValidationResult contains all validation errors.
+type ValidationResult struct {
+	Errors   []ValidationError
+	Warnings []ValidationError
+}
+
+func (r *ValidationResult) IsValid() bool {
+	return len(r.Errors) == 0
+}
+
+func (r *ValidationResult) AddError(path, message string) {
+	r.Errors = append(r.Errors, ValidationError{Path: path, Message: message})
+}
+
+func (r *ValidationResult) AddWarning(path, message string) {
+	r.Warnings = append(r.Warnings, ValidationError{Path: path, Message: message})
+}
+
+// Valid ID pattern: alphanumeric, hyphens, underscores
+var validIdPattern = regexp.MustCompile(`^[a-zA-Z][a-zA-Z0-9_-]*$`)
 
 // FablabYaml is the root YAML structure
 type FablabYaml struct {
@@ -35,6 +68,129 @@ type HostYaml struct {
 type ComponentYaml struct {
 	Type   string `yaml:"type"`
 	Id     string `yaml:"id"`
+}
+
+// ValidateConfig validates the YAML configuration without building the model.
+func ValidateConfig(path string) (*ValidationResult, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read file: %w", err)
+	}
+	return ValidateConfigBytes(data)
+}
+
+// ValidateConfigBytes validates YAML bytes.
+func ValidateConfigBytes(data []byte) (*ValidationResult, error) {
+	var config FablabYaml
+	if err := yaml.Unmarshal(data, &config); err != nil {
+		return nil, fmt.Errorf("failed to parse YAML: %w", err)
+	}
+	return validateConfig(&config), nil
+}
+
+func validateConfig(config *FablabYaml) *ValidationResult {
+	result := &ValidationResult{
+		Errors:   []ValidationError{},
+		Warnings: []ValidationError{},
+	}
+
+	// Validate model section
+	validateModel(config, result)
+
+	// Validate regions
+	validateRegions(config, result)
+
+	return result
+}
+
+func validateModel(config *FablabYaml, result *ValidationResult) {
+	if config.Model.Id == "" {
+		result.AddError("model.id", "model id is required")
+	} else if !validIdPattern.MatchString(config.Model.Id) {
+		result.AddError("model.id", "invalid id format: must start with letter and contain only alphanumeric, hyphens, underscores")
+	}
+}
+
+func validateRegions(config *FablabYaml, result *ValidationResult) {
+	if len(config.Regions) == 0 {
+		result.AddWarning("regions", "no regions defined")
+		return
+	}
+
+	seenRegionIds := make(map[string]bool)
+	for regionId, region := range config.Regions {
+		path := fmt.Sprintf("regions.%s", regionId)
+
+		// Check for duplicate region IDs (shouldn't happen with map, but validate anyway)
+		if seenRegionIds[regionId] {
+			result.AddError(path, "duplicate region id")
+		}
+		seenRegionIds[regionId] = true
+
+		// Validate region ID format
+		if !validIdPattern.MatchString(regionId) {
+			result.AddError(path, "invalid region id format")
+		}
+
+		// Validate hosts
+		validateHosts(&region, path, result)
+	}
+}
+
+func validateHosts(region *RegionYaml, basePath string, result *ValidationResult) {
+	if len(region.Hosts) == 0 {
+		result.AddWarning(basePath+".hosts", "no hosts defined in region")
+		return
+	}
+
+	seenHostIds := make(map[string]bool)
+	for hostId, host := range region.Hosts {
+		path := fmt.Sprintf("%s.hosts.%s", basePath, hostId)
+
+		// Check for duplicate host IDs within the region
+		if seenHostIds[hostId] {
+			result.AddError(path, "duplicate host id within region")
+		}
+		seenHostIds[hostId] = true
+
+		// Validate host ID format
+		if !validIdPattern.MatchString(hostId) {
+			result.AddError(path, "invalid host id format")
+		}
+
+		// Validate components
+		validateComponents(&host, path, result)
+	}
+}
+
+func validateComponents(host *HostYaml, basePath string, result *ValidationResult) {
+	seenCompIds := make(map[string]bool)
+
+	for i, comp := range host.Components {
+		path := fmt.Sprintf("%s.components[%d]", basePath, i)
+
+		// Validate component type is registered
+		if comp.Type == "" {
+			result.AddError(path+".type", "component type is required")
+		} else {
+			if _, err := model.GetComponentType(comp.Type); err != nil {
+				validTypes := model.ListComponentTypes()
+				result.AddError(path+".type", fmt.Sprintf("unknown component type '%s'. Valid types: %s",
+					comp.Type, strings.Join(validTypes, ", ")))
+			}
+		}
+
+		// Validate component ID if specified
+		if comp.Id != "" {
+			if !validIdPattern.MatchString(comp.Id) {
+				result.AddError(path+".id", "invalid component id format")
+			}
+			if seenCompIds[comp.Id] {
+				result.AddError(path+".id", "duplicate component id within host")
+			}
+			seenCompIds[comp.Id] = true
+		}
+	}
 }
 
 // LoadModel creates a Model from a YAML configuration file
@@ -91,6 +247,7 @@ func buildRegion(id string, config *RegionYaml) (*model.Region, error) {
 		if err != nil {
 			return nil, fmt.Errorf("host '%s': %w", hostId, err)
 		}
+		host.Region = region // Set parent reference
 		region.Hosts[hostId] = host
 	}
 
