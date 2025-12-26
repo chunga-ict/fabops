@@ -37,11 +37,12 @@ var ipCmd = &cobra.Command{
 var privateIp bool
 
 func ip(_ *cobra.Command, args []string) {
-	if err := model.Bootstrap(); err != nil {
+	ctx, err := model.MustBootstrapContext()
+	if err != nil {
 		logrus.Fatalf("unable to bootstrap (%v)", err)
 	}
 
-	m := model.GetModel()
+	m := ctx.GetModel()
 
 	hosts := m.SelectHosts(args[0])
 	for _, host := range hosts {

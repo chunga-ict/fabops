@@ -102,11 +102,12 @@ type listHostsAction struct {
 }
 
 func (self *listHostsAction) execute(cmd *cobra.Command, args []string) {
-	if err := model.Bootstrap(); err != nil {
+	ctx, err := model.MustBootstrapContext()
+	if err != nil {
 		logrus.Fatalf("unable to bootstrap (%s)", err)
 	}
 
-	m := model.GetModel()
+	m := ctx.GetModel()
 
 	hostSpec := "*"
 
@@ -168,11 +169,12 @@ func (self *listHostsAction) execute(cmd *cobra.Command, args []string) {
 type listComponentsAction struct{}
 
 func (self *listComponentsAction) execute(cmd *cobra.Command, args []string) {
-	if err := model.Bootstrap(); err != nil {
+	ctx, err := model.MustBootstrapContext()
+	if err != nil {
 		logrus.Fatalf("unable to bootstrap (%s)", err)
 	}
 
-	m := model.GetModel()
+	m := ctx.GetModel()
 	componentSpec := "*"
 
 	if len(args) > 0 {
@@ -202,11 +204,12 @@ func (self *listComponentsAction) execute(cmd *cobra.Command, args []string) {
 }
 
 func listActions(*cobra.Command, []string) {
-	if err := model.Bootstrap(); err != nil {
+	ctx, err := model.MustBootstrapContext()
+	if err != nil {
 		logrus.Fatalf("unable to bootstrap (%s)", err)
 	}
 
-	m := model.GetModel()
+	m := ctx.GetModel()
 
 	for _, action := range m.GetActions() {
 		fmt.Println(action)

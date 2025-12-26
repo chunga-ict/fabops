@@ -51,11 +51,12 @@ func newSshCmd() *cobra.Command {
 }
 
 func (self *sshCmd) ssh(_ *cobra.Command, args []string) {
-	if err := model.Bootstrap(); err != nil {
+	ctx, err := model.MustBootstrapContext()
+	if err != nil {
 		logrus.Fatalf("unable to bootstrap (%s)", err)
 	}
 
-	m := model.GetModel()
+	m := ctx.GetModel()
 	hosts := m.SelectHosts(args[0])
 	if len(hosts) > 1 {
 		logrus.Fatalf("your host selector matched [%d] hosts. must match exactly 1", len(hosts))

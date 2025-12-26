@@ -138,11 +138,12 @@ func (self *ImportCommand) importDir(path string) error {
 
 	logrus.Infof("imported instance at %s, id=[%s], model=[%s]", instanceDir, instance.Id, instance.Model)
 
-	if err := model.Bootstrap(); err != nil {
+	ctx, err := model.MustBootstrapContext()
+	if err != nil {
 		logrus.Fatalf("unable to bootstrap (%s)", err)
 	}
 
-	_, err = model.NewRun(model.GetModel(), model.GetLabel(), model.GetActiveInstanceConfig())
+	_, err = ctx.MustRun()
 	if err != nil {
 		logrus.WithError(err).Fatal("error initializing run")
 	}

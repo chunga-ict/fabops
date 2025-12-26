@@ -37,11 +37,12 @@ var dumpCmd = &cobra.Command{
 }
 
 func dump(_ *cobra.Command, _ []string) {
-	if err := model.Bootstrap(); err != nil {
+	ctx, err := model.MustBootstrapContext()
+	if err != nil {
 		logrus.Fatalf("unable to bootstrap (%s)", err)
 	}
 
-	m := model.GetModel()
+	m := ctx.GetModel()
 	if data, err := json.MarshalIndent(m.Dump(), "", "  "); err == nil {
 		fmt.Println()
 		fmt.Println(string(data))
@@ -58,11 +59,12 @@ var dumpHostsCmd = &cobra.Command{
 }
 
 func dumpHosts(_ *cobra.Command, args []string) {
-	if err := model.Bootstrap(); err != nil {
+	ctx, err := model.MustBootstrapContext()
+	if err != nil {
 		logrus.Fatalf("unable to bootstrap (%s)", err)
 	}
 
-	m := model.GetModel()
+	m := ctx.GetModel()
 
 	hostSpec := "*"
 

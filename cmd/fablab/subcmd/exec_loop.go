@@ -56,16 +56,17 @@ func newExecLoopCmd() *cobra.Command {
 }
 
 func (self *execLoopCmd) runExec(_ *cobra.Command, args []string) {
-	if err := model.Bootstrap(); err != nil {
+	ctx, err := model.MustBootstrapContext()
+	if err != nil {
 		logrus.Fatalf("unable to bootstrap (%s)", err)
 	}
 
-	ctx, err := model.NewRun(model.GetModel(), model.GetLabel(), model.GetActiveInstanceConfig())
+	run, err := ctx.MustRun()
 	if err != nil {
 		logrus.WithError(err).Fatal("error initializing run")
 	}
 
-	m := model.GetModel()
+	m := ctx.GetModel()
 
 	if !m.IsBound() {
 		logrus.Fatalf("model not bound")
@@ -99,7 +100,7 @@ func (self *execLoopCmd) runExec(_ *cobra.Command, args []string) {
 		iterationStart := time.Now()
 		figlet.Figlet(fmt.Sprintf("ITERATION-%03d", iterations))
 		for _, action := range actions {
-			if err = action.Execute(ctx); err != nil {
+			if err = action.Execute(run); err != nil {
 				logrus.WithError(err).Fatalf("action failed [%+v]", action)
 			}
 		}

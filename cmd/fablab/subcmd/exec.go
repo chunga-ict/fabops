@@ -39,16 +39,17 @@ var execCmd = &cobra.Command{
 var execCmdBindings []string
 
 func runExec(_ *cobra.Command, args []string) {
-	if err := model.Bootstrap(); err != nil {
+	ctx, err := model.MustBootstrapContext()
+	if err != nil {
 		logrus.Fatalf("unable to bootstrap (%s)", err)
 	}
 
-	ctx, err := model.NewRun(model.GetModel(), model.GetLabel(), model.GetActiveInstanceConfig())
+	run, err := ctx.MustRun()
 	if err != nil {
 		logrus.WithError(err).Fatal("error initializing run")
 	}
 
-	m := model.GetModel()
+	m := ctx.GetModel()
 
 	if !m.IsBound() {
 		logrus.Fatalf("model not bound")
@@ -71,7 +72,7 @@ func runExec(_ *cobra.Command, args []string) {
 	}
 
 	for _, action := range actions {
-		if err := action.Execute(ctx); err != nil {
+		if err := action.Execute(run); err != nil {
 			logrus.WithError(err).Fatalf("action failed [%+v]", action)
 		}
 	}

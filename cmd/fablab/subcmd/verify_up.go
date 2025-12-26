@@ -37,17 +37,18 @@ var verifyUpCmd = &cobra.Command{
 }
 
 func verifyUp(_ *cobra.Command, args []string) {
-	if err := model.Bootstrap(); err != nil {
+	ctx, err := model.MustBootstrapContext()
+	if err != nil {
 		logrus.Fatalf("unable to bootstrap (%s)", err)
 	}
 
-	m := model.GetModel()
+	m := ctx.GetModel()
 	components := m.SelectComponents(args[0])
 	if len(components) == 0 {
 		logrus.Fatal("your component spec matched 0 components, it should match at least 1")
 	}
 
-	run, err := model.NewRun(model.GetModel(), model.GetLabel(), model.GetActiveInstanceConfig())
+	run, err := ctx.MustRun()
 	if err != nil {
 		logrus.WithError(err).Fatal("error initializing run")
 	}

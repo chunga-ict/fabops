@@ -36,15 +36,16 @@ var syncCmd = &cobra.Command{
 }
 
 func sync(_ *cobra.Command, _ []string) {
-	if err := model.Bootstrap(); err != nil {
+	ctx, err := model.MustBootstrapContext()
+	if err != nil {
 		logrus.Fatalf("unable to bootstrap (%s)", err)
 	}
 
-	ctx, err := model.NewRun(model.GetModel(), model.GetLabel(), model.GetActiveInstanceConfig())
+	run, err := ctx.MustRun()
 	if err != nil {
 		logrus.WithError(err).Fatal("error initializing run")
 	}
-	if err := ctx.GetModel().Sync(ctx); err != nil {
+	if err := ctx.GetModel().Sync(run); err != nil {
 		logrus.Fatalf("error synchronizing all hosts (%s)", err)
 	}
 }
@@ -57,21 +58,23 @@ var syncBinariesCmd = &cobra.Command{
 }
 
 func syncBinaries(_ *cobra.Command, _ []string) {
-	if err := model.Bootstrap(); err != nil {
+	ctx, err := model.MustBootstrapContext()
+	if err != nil {
 		logrus.Fatalf("unable to bootstrap (%s)", err)
 	}
 
-	ctx, err := model.NewRun(model.GetModel(), model.GetLabel(), model.GetActiveInstanceConfig())
+	run, err := ctx.MustRun()
 	if err != nil {
 		logrus.WithError(err).Fatal("error initializing run")
 	}
 
-	if err := ctx.GetModel().Build(ctx); err != nil {
+	m := ctx.GetModel()
+	if err := m.Build(run); err != nil {
 		logrus.Fatalf("error building configuration (%v)", err)
 	}
 
-	ctx.GetModel().PutVariable("sync.target", "bin")
-	if err := ctx.GetModel().Sync(ctx); err != nil {
+	m.PutVariable("sync.target", "bin")
+	if err := m.Sync(run); err != nil {
 		logrus.Fatalf("error synchronizing all hosts (%s)", err)
 	}
 }
@@ -84,21 +87,23 @@ var syncConfigCmd = &cobra.Command{
 }
 
 func syncConfig(_ *cobra.Command, _ []string) {
-	if err := model.Bootstrap(); err != nil {
+	ctx, err := model.MustBootstrapContext()
+	if err != nil {
 		logrus.Fatalf("unable to bootstrap (%s)", err)
 	}
 
-	ctx, err := model.NewRun(model.GetModel(), model.GetLabel(), model.GetActiveInstanceConfig())
+	run, err := ctx.MustRun()
 	if err != nil {
 		logrus.WithError(err).Fatal("error initializing run")
 	}
 
-	if err := ctx.GetModel().Build(ctx); err != nil {
+	m := ctx.GetModel()
+	if err := m.Build(run); err != nil {
 		logrus.Fatalf("error building configuration (%v)", err)
 	}
 
-	ctx.GetModel().PutVariable("sync.target", "cfg")
-	if err := ctx.GetModel().Sync(ctx); err != nil {
+	m.PutVariable("sync.target", "cfg")
+	if err := m.Sync(run); err != nil {
 		logrus.Fatalf("error synchronizing all hosts (%s)", err)
 	}
 }

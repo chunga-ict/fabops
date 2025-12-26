@@ -35,36 +35,39 @@ var upCmd = &cobra.Command{
 }
 
 func up(_ *cobra.Command, _ []string) {
-	if err := model.Bootstrap(); err != nil {
+	ctx, err := model.MustBootstrapContext()
+	if err != nil {
 		logrus.Fatalf("unable to bootstrap (%v)", err)
 	}
 
-	ctx, err := model.NewRun(model.GetModel(), model.GetLabel(), model.GetActiveInstanceConfig())
+	run, err := ctx.MustRun()
 	if err != nil {
 		logrus.WithError(err).Fatal("error initializing run")
 	}
 
+	m := ctx.GetModel()
+
 	figlet.Figlet("infrastructure")
 
-	if err := ctx.GetModel().Express(ctx); err != nil {
+	if err := m.Express(run); err != nil {
 		logrus.Fatalf("error expressing (%v)", err)
 	}
 
 	figlet.Figlet("configuration")
 
-	if err := ctx.GetModel().Build(ctx); err != nil {
+	if err := m.Build(run); err != nil {
 		logrus.Fatalf("error building (%v)", err)
 	}
 
 	figlet.Figlet("distribution")
 
-	if err := ctx.GetModel().Sync(ctx); err != nil {
+	if err := m.Sync(run); err != nil {
 		logrus.Fatalf("error distributing (%v)", err)
 	}
 
 	figlet.Figlet("activation")
 
-	if err := ctx.GetModel().Activate(ctx); err != nil {
+	if err := m.Activate(run); err != nil {
 		logrus.Fatalf("error activating (%v)", err)
 	}
 

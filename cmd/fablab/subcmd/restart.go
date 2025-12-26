@@ -47,20 +47,21 @@ type restartAction struct {
 }
 
 func (self *restartAction) run(_ *cobra.Command, args []string) {
-	if err := model.Bootstrap(); err != nil {
+	ctx, err := model.MustBootstrapContext()
+	if err != nil {
 		logrus.Fatalf("unable to bootstrap (%s)", err)
 	}
 
-	ctx, err := model.NewRun(model.GetModel(), model.GetLabel(), model.GetActiveInstanceConfig())
+	run, err := ctx.MustRun()
 	if err != nil {
 		logrus.WithError(err).Fatal("error initializing run")
 	}
 
-	if err = component.StopInParallel(args[0], self.concurrency).Execute(ctx); err != nil {
+	if err = component.StopInParallel(args[0], self.concurrency).Execute(run); err != nil {
 		logrus.WithError(err).Fatalf("error stopping components")
 	}
 
-	if err = component.StartInParallel(args[0], self.concurrency).Execute(ctx); err != nil {
+	if err = component.StartInParallel(args[0], self.concurrency).Execute(run); err != nil {
 		logrus.WithError(err).Fatalf("error starting components")
 	}
 

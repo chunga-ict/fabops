@@ -27,5 +27,7 @@ func (c *GenericComponent) Stop(run Run, component *Component) error {
 }
 
 func init() {
-	RegisterComponentType("generic", func() ComponentType { return &GenericComponent{} })
+	RegisterComponentType("generic", func() ComponentType {
+		return &GenericComponent{Type: "generic"}
+	})
 }

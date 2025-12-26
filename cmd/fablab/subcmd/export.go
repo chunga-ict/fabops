@@ -37,11 +37,12 @@ var exportCmd = &cobra.Command{
 }
 
 func export(_ *cobra.Command, _ []string) {
-	if err := model.Bootstrap(); err != nil {
+	ctx, err := model.MustBootstrapContext()
+	if err != nil {
 		logrus.Fatalf("unable to bootstrap (%s)", err)
 	}
 
-	m := model.GetModel()
+	m := ctx.GetModel()
 
 	zipName := fmt.Sprintf("%s-%d.zip", filepath.Base(model.BuildPath()), info.NowInMilliseconds())
 

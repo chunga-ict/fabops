@@ -53,11 +53,12 @@ type getFilesAction struct {
 }
 
 func (self *getFilesAction) run(_ *cobra.Command, args []string) error {
-	if err := model.Bootstrap(); err != nil {
+	ctx, err := model.MustBootstrapContext()
+	if err != nil {
 		logrus.Fatalf("unable to bootstrap (%s)", err)
 	}
 
-	m := model.GetModel()
+	m := ctx.GetModel()
 	hosts := m.SelectHosts(args[0])
 	if len(hosts) == 0 {
 		logrus.Fatalf("your hostSpec matched [%d] hosts. must match at least 1", len(hosts))

@@ -70,20 +70,23 @@ func (self *CreateCommand) create(*cobra.Command, []string) error {
 		return fmt.Errorf("invalid executable path '%s' (%w)", self.Executable, err)
 	}
 
-	if model.GetModel() == nil {
+	// Note: create uses GetModel() directly as it checks pre-configured model
+	// before Bootstrap() is called. This is intentional for instance creation.
+	m := model.GetModel()
+	if m == nil {
 		return errors.New("no model configured, exiting")
 	}
 
-	if model.GetModel().GetId() == "" {
+	if m.GetId() == "" {
 		return errors.New("no model id provided, exiting")
 	}
 
 	instanceId, err := model.NewInstance(self.Name, self.WorkingDir, self.Executable)
 	if err != nil {
-		return errors.Wrapf(err, "unable to create instance of model %v, exiting", model.GetModel().Id)
+		return errors.Wrapf(err, "unable to create instance of model %v, exiting", m.Id)
 	}
 
-	logrus.Infof("allocated new instance [%v] for model %v", instanceId, model.GetModel().GetId())
+	logrus.Infof("allocated new instance [%v] for model %v", instanceId, m.GetId())
 
 	if err := model.CreateLabel(instanceId, self.Bindings); err != nil {
 		return errors.Wrapf(err, "unable to create instance label [%s]", instanceId)

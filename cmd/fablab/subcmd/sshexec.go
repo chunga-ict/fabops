@@ -53,11 +53,12 @@ func newSshExecCmd() *sshExecCmd {
 }
 
 func (cmd *sshExecCmd) run(_ *cobra.Command, args []string) {
-	if err := model.Bootstrap(); err != nil {
+	ctx, err := model.MustBootstrapContext()
+	if err != nil {
 		logrus.Fatalf("unable to bootstrap (%s)", err)
 	}
 
-	m := model.GetModel()
+	m := ctx.GetModel()
 	logrus.Infof("executing %v with concurrency %v", args[1], cmd.concurrency)
 	var tmpl *template.Template
 	if len(args) == 3 {
@@ -68,7 +69,7 @@ func (cmd *sshExecCmd) run(_ *cobra.Command, args []string) {
 		}
 	}
 
-	err := m.ForEachHost(args[0], cmd.concurrency, func(h *model.Host) error {
+	err = m.ForEachHost(args[0], cmd.concurrency, func(h *model.Host) error {
 		var buf *libssh.SyncBuffer
 		var out io.Writer
 		if tmpl != nil {

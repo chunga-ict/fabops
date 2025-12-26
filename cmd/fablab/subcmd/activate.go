@@ -34,15 +34,16 @@ var activateCmd = &cobra.Command{
 }
 
 func activate(_ *cobra.Command, _ []string) {
-	if err := model.Bootstrap(); err != nil {
+	ctx, err := model.MustBootstrapContext()
+	if err != nil {
 		logrus.WithError(err).Fatal("unable to bootstrap")
 	}
 
-	ctx, err := model.NewRun(model.GetModel(), model.GetLabel(), model.GetActiveInstanceConfig())
+	run, err := ctx.MustRun()
 	if err != nil {
 		logrus.WithError(err).Fatal("error initializing run")
 	}
-	if err := ctx.GetModel().Activate(ctx); err != nil {
+	if err := ctx.GetModel().Activate(run); err != nil {
 		logrus.Fatalf("error synchronizing all hosts (%v)", err)
 	}
 }
