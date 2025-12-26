@@ -18,14 +18,15 @@ package subcmd
 
 import (
 	"fmt"
+	"strconv"
+	"strings"
+	"time"
+
 	"github.com/michaelquigley/pfxlog"
 	"github.com/openziti/fablab/kernel/lib/figlet"
 	"github.com/openziti/fablab/kernel/model"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	"strconv"
-	"strings"
-	"time"
 )
 
 func init() {
@@ -59,7 +60,7 @@ func (self *execLoopCmd) runExec(_ *cobra.Command, args []string) {
 		logrus.Fatalf("unable to bootstrap (%s)", err)
 	}
 
-	ctx, err := model.NewRun()
+	ctx, err := model.NewRun(model.GetModel(), model.GetLabel(), model.GetActiveInstanceConfig())
 	if err != nil {
 		logrus.WithError(err).Fatal("error initializing run")
 	}

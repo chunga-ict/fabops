@@ -51,7 +51,7 @@ func (self *startAction) run(_ *cobra.Command, args []string) {
 		logrus.Fatalf("unable to bootstrap (%s)", err)
 	}
 
-	ctx, err := model.NewRun()
+	ctx, err := model.NewRun(model.GetModel(), model.GetLabel(), model.GetActiveInstanceConfig())
 	if err != nil {
 		logrus.WithError(err).Fatal("error initializing run")
 	}

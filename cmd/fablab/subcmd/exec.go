@@ -17,11 +17,12 @@
 package subcmd
 
 import (
+	"strings"
+
 	"github.com/openziti/fablab/kernel/model"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	"strings"
 )
 
 func init() {
@@ -42,7 +43,7 @@ func runExec(_ *cobra.Command, args []string) {
 		logrus.Fatalf("unable to bootstrap (%s)", err)
 	}
 
-	ctx, err := model.NewRun()
+	ctx, err := model.NewRun(model.GetModel(), model.GetLabel(), model.GetActiveInstanceConfig())
 	if err != nil {
 		logrus.WithError(err).Fatal("error initializing run")
 	}

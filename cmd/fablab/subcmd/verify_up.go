@@ -17,11 +17,12 @@
 package subcmd
 
 import (
+	"time"
+
 	"github.com/michaelquigley/pfxlog"
 	"github.com/openziti/fablab/kernel/model"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	"time"
 )
 
 func init() {
@@ -46,7 +47,7 @@ func verifyUp(_ *cobra.Command, args []string) {
 		logrus.Fatal("your component spec matched 0 components, it should match at least 1")
 	}
 
-	run, err := model.NewRun()
+	run, err := model.NewRun(model.GetModel(), model.GetLabel(), model.GetActiveInstanceConfig())
 	if err != nil {
 		logrus.WithError(err).Fatal("error initializing run")
 	}

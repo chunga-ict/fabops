@@ -19,14 +19,6 @@ package model
 import (
 	"embed"
 	"fmt"
-	"github.com/openziti/fablab/kernel/lib/figlet"
-	"github.com/openziti/fablab/kernel/libssh"
-	"github.com/openziti/foundation/v2/info"
-	cmap "github.com/orcaman/concurrent-map/v2"
-	"github.com/pkg/errors"
-	"github.com/pkg/sftp"
-	"github.com/sirupsen/logrus"
-	"golang.org/x/crypto/ssh"
 	"io"
 	"io/fs"
 	"os"
@@ -37,6 +29,15 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/openziti/fablab/kernel/lib/figlet"
+	"github.com/openziti/fablab/kernel/libssh"
+	"github.com/openziti/foundation/v2/info"
+	cmap "github.com/orcaman/concurrent-map/v2"
+	"github.com/pkg/errors"
+	"github.com/pkg/sftp"
+	"github.com/sirupsen/logrus"
+	"golang.org/x/crypto/ssh"
 )
 
 const (
@@ -850,12 +851,12 @@ func (f ActionFunc) Execute(run Run) error {
 	return f(run)
 }
 
-func NewRun() (Run, error) {
+func NewRun(m *Model, l *Label, cfg *InstanceConfig) (Run, error) {
 	result := &runImpl{
-		label:          GetLabel(),
-		model:          GetModel(),
+		label:          l,
+		model:          m,
 		runId:          fmt.Sprintf("%d", info.NowInMilliseconds()),
-		instanceConfig: instanceConfig,
+		instanceConfig: cfg,
 		oneTimeOps:     cmap.New[*oneTimeOpContext](),
 	}
 	return result.init()

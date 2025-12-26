@@ -40,7 +40,7 @@ func sync(_ *cobra.Command, _ []string) {
 		logrus.Fatalf("unable to bootstrap (%s)", err)
 	}
 
-	ctx, err := model.NewRun()
+	ctx, err := model.NewRun(model.GetModel(), model.GetLabel(), model.GetActiveInstanceConfig())
 	if err != nil {
 		logrus.WithError(err).Fatal("error initializing run")
 	}
@@ -61,7 +61,7 @@ func syncBinaries(_ *cobra.Command, _ []string) {
 		logrus.Fatalf("unable to bootstrap (%s)", err)
 	}
 
-	ctx, err := model.NewRun()
+	ctx, err := model.NewRun(model.GetModel(), model.GetLabel(), model.GetActiveInstanceConfig())
 	if err != nil {
 		logrus.WithError(err).Fatal("error initializing run")
 	}
@@ -88,7 +88,7 @@ func syncConfig(_ *cobra.Command, _ []string) {
 		logrus.Fatalf("unable to bootstrap (%s)", err)
 	}
 
-	ctx, err := model.NewRun()
+	ctx, err := model.NewRun(model.GetModel(), model.GetLabel(), model.GetActiveInstanceConfig())
 	if err != nil {
 		logrus.WithError(err).Fatal("error initializing run")
 	}

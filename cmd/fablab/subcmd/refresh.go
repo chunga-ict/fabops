@@ -39,7 +39,7 @@ func refresh(_ *cobra.Command, _ []string) {
 		logrus.WithError(err).Fatal("unable to bootstrap")
 	}
 
-	ctx, err := model.NewRun()
+	ctx, err := model.NewRun(model.GetModel(), model.GetLabel(), model.GetActiveInstanceConfig())
 	if err != nil {
 		logrus.WithError(err).Fatal("error initializing run")
 	}

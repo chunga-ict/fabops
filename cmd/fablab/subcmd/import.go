@@ -18,17 +18,18 @@ package subcmd
 
 import (
 	"fmt"
+	"io/fs"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"strings"
+
 	"github.com/michaelquigley/pfxlog"
 	terraform0 "github.com/openziti/fablab/kernel/lib/runlevel/0_infrastructure/terraform"
 	"github.com/openziti/fablab/kernel/model"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	"io/fs"
-	"os"
-	"os/exec"
-	"path/filepath"
-	"strings"
 )
 
 func init() {
@@ -141,7 +142,7 @@ func (self *ImportCommand) importDir(path string) error {
 		logrus.Fatalf("unable to bootstrap (%s)", err)
 	}
 
-	_, err = model.NewRun()
+	_, err = model.NewRun(model.GetModel(), model.GetLabel(), model.GetActiveInstanceConfig())
 	if err != nil {
 		logrus.WithError(err).Fatal("error initializing run")
 	}

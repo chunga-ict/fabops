@@ -17,12 +17,13 @@
 package main
 
 import (
+	"os"
+	"os/exec"
+
 	"github.com/michaelquigley/pfxlog"
 	"github.com/openziti/fablab/cmd/fablab/subcmd"
 	"github.com/openziti/fablab/kernel/model"
 	"github.com/sirupsen/logrus"
-	"os"
-	"os/exec"
 )
 
 func init() {
@@ -32,7 +33,7 @@ func init() {
 func main() {
 	if len(os.Args) > 1 {
 		runLocalBinary := false
-		if os.Args[1] == "completion" || os.Args[1] == "clean" {
+		if os.Args[1] == "completion" || os.Args[1] == "clean" || os.Args[1] == "serve" {
 			runLocalBinary = true
 		} else if len(os.Args) > 2 {
 			if os.Args[1] == "list" && os.Args[2] == "instances" {

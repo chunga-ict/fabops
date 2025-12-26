@@ -1,0 +1,22 @@
+# Fablab "Intelligent Operator" Transformation Plan
+
+- [/] **Phase 1: Core Refactoring (Context-based Architecture)** <!-- id: 0 -->
+    - [x] Create `kernel/model/context.go` to replace globals. <!-- id: 1 -->
+    - [x] Refactor `model` package to remove global singletons (`model`, `label`). <!-- id: 2 -->
+    - [x] Update all subcommands to use Context injection. <!-- id: 3 -->
+- [/] **Phase 2: Configuration & Registry** <!-- id: 4 -->
+    - [x] Implement `kernel/model/registry` for Component Type Registry. <!-- id: 5 -->
+    - [x] Implement `kernel/loader` for parsing YAML to implementation plan. <!-- id: 6 -->
+    - [x] Create standard Component wrappers for Registry. <!-- id: 7 -->
+- [/] **Phase 3: State Management (Digital Twin Core)** <!-- id: 8 -->
+    - [x] Define `StateStore` interface in `kernel/store`. <!-- id: 9 -->
+    - [x] Implement File-based Store (for backward compatibility). <!-- id: 10 -->
+    - [x] Implement `Reconciler` logic (Diff measurement). <!-- id: 11 -->
+- [/] **Phase 4: Interface Layer (MCP & API)** <!-- id: 12 -->
+    - [x] Implement `kernel/mcp` package for MCP Server. <!-- id: 13 -->
+    - [x] Add `create_network`, `status`, `logs` tools to MCP. <!-- id: 14 -->
+    - [x] Refactor `cmd/fablab` to act as a client for the Daemon (optional for v1). <!-- id: 15 -->
+- [x] **Phase 5: Verification & Documentation** <!-- id: 16 -->
+    - [x] Verify `fablab` CLI works with YAML config. <!-- id: 17 -->
+    - [x] Verify MCP Server with Claude Desktop/Cursor. <!-- id: 18 -->
+    - [x] Update documentation. <!-- id: 19 -->
