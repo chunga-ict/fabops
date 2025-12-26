@@ -79,3 +79,116 @@ The kernel includes primitives for remote puppetry using `ssh`, along with relia
 ## Getting Started with the Examples
 
 See the [Getting Started with the Examples](docs/examples/00.index.md) guide for details about how to get started with the stock example models.
+
+---
+
+## Extended Features
+
+### Declarative Infrastructure (YAML)
+
+Define infrastructure declaratively using YAML:
+
+```yaml
+# network.yaml
+model:
+  id: my-ziti-network
+
+regions:
+  us-east-1:
+    site: aws
+    hosts:
+      controller:
+        instanceType: t3.medium
+        components:
+          - type: ziti-controller
+      router-1:
+        instanceType: t3.small
+        components:
+          - type: ziti-router
+```
+
+Apply configuration:
+
+```bash
+# Validate
+fablab apply --config network.yaml --dry-run
+
+# Apply
+fablab apply --config network.yaml
+```
+
+### Reconciler Engine
+
+The reconciler automatically syncs desired state with current state:
+
+```go
+import (
+    "github.com/openziti/fablab/kernel/engine"
+    "github.com/openziti/fablab/kernel/store"
+)
+
+reconciler := engine.NewReconciler(store.NewMemoryStore())
+result, _ := reconciler.Reconcile(ctx)
+// result: Created=3, Updated=0, Deleted=1, Unchanged=5
+```
+
+### MCP Server (AI Integration)
+
+Start MCP server for AI-driven infrastructure management:
+
+```bash
+fablab mcp-server [--memory]
+```
+
+**MCP Tools:**
+| Tool | Description |
+|------|-------------|
+| `list_instances` | List all instances |
+| `get_instance` | Get instance details |
+| `apply_config` | Apply YAML configuration |
+| `get_resources` | Get instance resources |
+
+**MCP Resources:**
+| URI | Description |
+|-----|-------------|
+| `fablab://status` | All instances status |
+| `fablab://instances/{id}` | Instance details |
+
+### Component Registry
+
+Register custom components:
+
+```go
+model.RegisterComponentType("my-component", func() model.ComponentType {
+    return &MyComponent{}
+})
+```
+
+Built-in: `generic`, `ziti-controller`, `ziti-router`
+
+### Architecture
+
+```
+CLI Layer (apply, mcp-server, build, ...)
+         │
+         ▼
+Context Layer (MustBootstrapContext → Context{Model, Label})
+         │
+    ┌────┴────┐
+    ▼         ▼
+YAML Loader   MCP Server
+    │         │
+    └────┬────┘
+         ▼
+Reconciler Engine (ComputeDiff → Reconcile)
+         │
+         ▼
+Store Layer (MemoryStore / FileStore)
+```
+
+### Running Tests
+
+```bash
+go test ./kernel/...
+go test ./cmd/...
+```
